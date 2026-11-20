@@ -674,6 +674,142 @@ public class DataStorage {
         catatMember(tugas.getPengambil(), "HASIL VERIFIKASI", tugas.getId() + " - " + tugas.getJudul() + " " + hasil);
     }
 
+// ======================================================================
+    // RIWAYAT
+    // ======================================================================
+
+    /**
+     * Mengambil salinan seluruh riwayat aktivitas admin.
+     *
+     * @return salinan seluruh riwayat aktivitas admin
+     */
+    public List<RiwayatAdmin> getRiwayatAdmin() {
+        return new ArrayList<>(riwayatAdminList);
+    }
+
+    /**
+     * Mengambil salinan seluruh riwayat member (semua pengguna).
+     *
+     * @return salinan seluruh riwayat member (semua pengguna)
+     */
+    public List<RiwayatMember> getRiwayatMemberSemua() {
+        return new ArrayList<>(riwayatMemberList);
+    }
+
+    /**
+     * Mengambil riwayat milik satu member.
+     *
+     * @param username username member
+     * @return daftar riwayat member tersebut
+     */
+    public List<RiwayatMember> getRiwayatMember(String username) {
+        return riwayatMemberList.stream()
+                .filter(r -> r.getUsername().equalsIgnoreCase(username))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Mencatat aktivitas admin ke riwayat admin.
+     *
+     * @param admin  username admin pelaku
+     * @param aksi   jenis aksi
+     * @param detail keterangan aksi
+     */
+    private void catatAdmin(String admin, String aksi, String detail) {
+        int id = riwayatAdminList.stream().mapToInt(RiwayatAdmin::getId).max().orElse(0) + 1;
+        riwayatAdminList.add(new RiwayatAdmin(id, admin, aksi, detail));
+    }
+
+    /**
+     * Mencatat transaksi member ke riwayat member.
+     *
+     * @param username username member terkait
+     * @param aksi     jenis aksi
+     * @param detail   keterangan aksi
+     */
+    private void catatMember(String username, String aksi, String detail) {
+        int id = riwayatMemberList.stream().mapToInt(RiwayatMember::getId).max().orElse(0) + 1;
+        riwayatMemberList.add(new RiwayatMember(id, username, aksi, detail));
+    }
+
+    // ======================================================================
+    // PENYIMPANAN FILE
+    // ======================================================================
+
+    /**
+     * Membaca seluruh data dari file di folder penyimpanan, lalu menyiapkan data awal bila masih kosong
+     * (akun admin bawaan dan beberapa divisi contoh).
+     *
+     * @return true jika semua file berhasil dibaca, false jika terjadi kesalahan baca
+     */
+    public boolean muat() {
+        boolean berhasil = true;
+        try {
+            accounts.clear();
+            divisiList.clear();
+            anggotaList.clear();
+            tugasList.clear();
+            riwayatAdminList.clear();
+            riwayatMemberList.clear();
+
+            for (String[] p : bacaBaris("akun.txt")) {
+                try {
+                    if ("ADMIN".equals(p[0]) && p.length >= 4) {
+                        accounts.put(p[1].toLowerCase(), new Admin(p[1], p[2], p[3]));
+                    } else if ("MEMBER".equals(p[0]) && p.length >= 6) {
+                        accounts.put(p[1].toLowerCase(), new Member(p[1], p[2], p[3], p[4], p[5]));
+                    }
+                } catch (RuntimeException e) {
+                    // baris rusak dilewati
+                }
+            }
+            for (String[] p : bacaBaris("divisi.txt")) {
+                try {
+                    divisiList.add(new Divisi(p[0], p[1], p[2], Integer.parseInt(p[3])));
+                } catch (RuntimeException e) {
+                    // baris rusak dilewati
+                }
+            }
+            for (String[] p : bacaBaris("anggota.txt")) {
+                try {
+                    Anggota.Status status = p.length >= 6 ? Anggota.Status.valueOf(p[5]) : Anggota.Status.AKTIF;
+                    anggotaList.add(new Anggota(p[0], p[1], p[2], p[3], p[4], status));
+                } catch (RuntimeException e) {
+                    // baris rusak dilewati
+                }
+            }
+            for (String[] p : bacaBaris("tugas.txt")) {
+                try {
+                    tugasList.add(new Tugas(p[0], p[1], p[2], p[3], LocalDate.parse(p[4]),
+                            Tugas.Status.valueOf(p[5]), p[6]));
+                } catch (RuntimeException e) {
+                    // baris rusak dilewati
+                }
+            }
+            for (String[] p : bacaBaris("riwayat_admin.txt")) {
+                try {
+                    riwayatAdminList.add(new RiwayatAdmin(Integer.parseInt(p[0]), p[1], p[2], p[3],
+                            LocalDateTime.parse(p[4], RiwayatAdmin.FORMAT)));
+                } catch (RuntimeException e) {
+                    // baris rusak dilewati
+                }
+            }
+            for (String[] p : bacaBaris("riwayat_member.txt")) {
+                try {
+                    riwayatMemberList.add(new RiwayatMember(Integer.parseInt(p[0]), p[1], p[2], p[3],
+                            LocalDateTime.parse(p[4], RiwayatAdmin.FORMAT)));
+                } catch (RuntimeException e) {
+                    // baris rusak dilewati
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Gagal membaca data: " + e.getMessage());
+            berhasil = false;
+        }
+        siapkanDataAwal();
+        return berhasil;
+    }
+
 
 
 
