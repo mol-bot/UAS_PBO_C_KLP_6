@@ -902,6 +902,130 @@ public class DataStorage {
     }
 
 
+// ======================================================================
+    // HELPER PRIVAT
+    // ======================================================================
+
+    /**
+     * Memastikan sebuah input tidak kosong.
+     *
+     * @param teks      input yang diperiksa
+     * @param namaField nama kolom untuk pesan kesalahan
+     * @throws IllegalArgumentException jika input kosong
+     */
+    private void wajib(String teks, String namaField) {
+        if (teks == null || teks.isBlank()) {
+            throw new IllegalArgumentException(namaField + " tidak boleh kosong.");
+        }
+    }
+
+    /**
+     * Mengubah teks yyyy-MM-dd menjadi tanggal.
+     *
+     * @param teks teks tanggal
+     * @return tanggal hasil konversi
+     * @throws IllegalArgumentException jika format tanggal salah
+     */
+    private LocalDate parseTanggal(String teks) {
+        try {
+            return LocalDate.parse(teks.trim());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Format tanggal harus yyyy-MM-dd, contoh 2026-12-31.");
+        }
+    }
+
+    /**
+     * Memastikan divisi masih memiliki sisa kuota anggota aktif.
+     *
+     * @param divisi divisi yang diperiksa
+     * @throws IllegalStateException jika kuota sudah penuh
+     */
+    private void cekKuota(Divisi divisi) {
+        if (jumlahAnggota(divisi.getId()) >= divisi.getKuota()) {
+            throw new IllegalStateException("Kuota divisi " + divisi.getNama() + " sudah penuh.");
+        }
+    }
+
+    /**
+     * Memastikan nama divisi belum dipakai divisi lain.
+     *
+     * @param nama      nama divisi yang diperiksa
+     * @param kecualiId kode divisi yang dikecualikan (saat edit), atau null
+     * @throws IllegalArgumentException jika nama sudah dipakai
+     */
+    private void cekNamaDivisiUnik(String nama, String kecualiId) {
+        for (Divisi d : divisiList) {
+            boolean kembar = d.getNama().equalsIgnoreCase(nama.trim());
+            boolean dirinya = kecualiId != null && d.getId().equals(kecualiId);
+            if (kembar && !dirinya) {
+                throw new IllegalArgumentException("Divisi '" + nama.trim() + "' sudah ada.");
+            }
+        }
+    }
+
+    /**
+     * Mengembalikan tugas yang belum selesai milik anggota ke status TERSEDIA.
+     *
+     * @param anggota anggota yang tugasnya dilepas
+     */
+    private void lepasTugasMilik(Anggota anggota) {
+        if (!anggota.punyaAkun()) {
+            return;
+        }
+        for (Tugas t : tugasList) {
+            boolean milikAnggota = t.getPengambil().equalsIgnoreCase(anggota.getUsername());
+            if (milikAnggota && t.getStatus() != Tugas.Status.SELESAI) {
+                t.lepaskan();
+            }
+        }
+    }
+
+    /**
+     * Mengambil daftar kode seluruh divisi.
+     *
+     * @return daftar kode seluruh divisi
+     */
+    private List<String> idDivisi() {
+        return divisiList.stream().map(Divisi::getId).collect(Collectors.toList());
+    }
+
+    /**
+     * Mengambil daftar kode seluruh anggota/pendaftaran.
+     *
+     * @return daftar kode seluruh anggota/pendaftaran
+     */
+    private List<String> idAnggota() {
+        return anggotaList.stream().map(Anggota::getId).collect(Collectors.toList());
+    }
+
+    /**
+     * Mengambil daftar kode seluruh tugas.
+     *
+     * @return daftar kode seluruh tugas
+     */
+    private List<String> idTugas() {
+        return tugasList.stream().map(Tugas::getId).collect(Collectors.toList());
+    }
+
+    /**
+     * Membuat kode berikutnya, misalnya "D04" setelah "D03".
+     *
+     * @param awalan huruf awalan kode
+     * @param idAda  daftar kode yang sudah ada
+     * @return kode baru yang unik
+     */
+    private String nextKode(String awalan, List<String> idAda) {
+        int maks = 0;
+        for (String id : idAda) {
+            try {
+                maks = Math.max(maks, Integer.parseInt(id.substring(awalan.length())));
+            } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                // kode non-standar diabaikan
+            }
+        }
+        return String.format("%s%02d", awalan, maks + 1);
+    }
+}
 
 
 
