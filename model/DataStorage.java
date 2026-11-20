@@ -809,6 +809,98 @@ public class DataStorage {
         siapkanDataAwal();
         return berhasil;
     }
+   /**
+     * Menyimpan seluruh data ke file di folder penyimpanan.
+     *
+     * @return true jika berhasil, false jika terjadi kesalahan tulis
+     */
+    public boolean simpan() {
+        try {
+            Files.createDirectories(folder);
+            tulis("akun.txt", accounts.values().stream().map(Account::toRecord).collect(Collectors.toList()));
+            tulis("divisi.txt", divisiList.stream().map(Divisi::toRecord).collect(Collectors.toList()));
+            tulis("anggota.txt", anggotaList.stream().map(Anggota::toRecord).collect(Collectors.toList()));
+            tulis("tugas.txt", tugasList.stream().map(Tugas::toRecord).collect(Collectors.toList()));
+            tulis("riwayat_admin.txt", riwayatAdminList.stream().map(RiwayatAdmin::toRecord).collect(Collectors.toList()));
+            tulis("riwayat_member.txt", riwayatMemberList.stream().map(RiwayatMember::toRecord).collect(Collectors.toList()));
+            return true;
+        } catch (IOException e) {
+            System.err.println("Gagal menyimpan data: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Menyimpan laporan teks ke file laporan.txt di folder penyimpanan.
+     *
+     * @param baris isi laporan, satu elemen per baris
+     * @return lokasi file laporan, atau {@code null} jika gagal menyimpan
+     */
+    public Path simpanLaporan(List<String> baris) {
+        try {
+            Files.createDirectories(folder);
+            Path file = folder.resolve("laporan.txt");
+            Files.write(file, baris, StandardCharsets.UTF_8);
+            return file;
+        } catch (IOException e) {
+            System.err.println("Gagal menyimpan laporan: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Membaca file teks menjadi daftar baris yang sudah dipecah per kolom.
+     *
+     * @param namaFile nama file di folder penyimpanan
+     * @return daftar baris (kosong jika file belum ada)
+     * @throws IOException jika file gagal dibaca
+     */
+    private List<String[]> bacaBaris(String namaFile) throws IOException {
+        List<String[]> hasil = new ArrayList<>();
+        Path file = folder.resolve(namaFile);
+        if (!Files.exists(file)) {
+            return hasil;
+        }
+        try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            String baris;
+            while ((baris = reader.readLine()) != null) {
+                if (!baris.isBlank()) {
+                    hasil.add(baris.split("\\|", -1));
+                }
+            }
+        }
+        return hasil;
+    }
+
+    /**
+     * Menulis daftar baris ke file teks (menimpa isi lama).
+     *
+     * @param namaFile nama file di folder penyimpanan
+     * @param baris    isi file, satu elemen per baris
+     * @throws IOException jika file gagal ditulis
+     */
+    private void tulis(String namaFile, List<String> baris) throws IOException {
+        try (BufferedWriter writer = Files.newBufferedWriter(folder.resolve(namaFile), StandardCharsets.UTF_8)) {
+            for (String b : baris) {
+                writer.write(b);
+                writer.newLine();
+            }
+        }
+    }
+
+    /** Menyiapkan akun admin bawaan dan beberapa divisi contoh jika data masih kosong. */
+    private void siapkanDataAwal() {
+        boolean adaAdmin = accounts.values().stream().anyMatch(a -> a instanceof Admin);
+        if (!adaAdmin) {
+            accounts.put("admin", new Admin("admin", "admin123", "Administrator"));
+        }
+        if (divisiList.isEmpty()) {
+            divisiList.add(new Divisi("D01", "Acara", "Menyusun rundown dan menjalankan acara", 5));
+            divisiList.add(new Divisi("D02", "Humas", "Relasi sponsor dan media partner", 4));
+            divisiList.add(new Divisi("D03", "Konsumsi", "Penyediaan makanan dan minuman", 3));
+        }
+    }
+
 
 
 
